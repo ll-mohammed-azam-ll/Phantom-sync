@@ -167,22 +167,25 @@ let conn;
 // 1. Initialize Peer with reliable configuration
 // We use a public STUN server to help bypass mobile firewalls
 // Replace your existing Peer initialization with this:
+// --- UPDATED CORE ENGINE FOR MOBILE DATA ---
 peer = new Peer(null, {
     debug: 2,
     config: {
         'iceServers': [
-            { url: 'stun:stun.l.google.com:19302' },
-            { url: 'stun:stun1.l.google.com:19302' },
-            { url: 'stun:stun2.l.google.com:19302' },
-            // Free TURN server for testing - this helps bypass mobile firewalls
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            // This TURN server is the "Tunnel" that forces the connection through
             {
-                urls: 'turn:relay.metered.ca:80',
+                urls: 'turn:relay.metered.ca:443',
                 username: 'metered',
                 credential: 'password'
             }
-        ]
+        ],
+        'sdpSemantics': 'unified-plan'
     }
 });
+
+
 
 
 // Display your Vault Key once it's generated
@@ -213,7 +216,8 @@ function connectToPeer() {
     
     // Connect to the remote peer
     conn = peer.connect(remoteId, {
-        reliable: true // Ensures data arrives in order
+        reliable: true,
+        serialization: 'json' 
     });
     
     setupConnectionListeners();
