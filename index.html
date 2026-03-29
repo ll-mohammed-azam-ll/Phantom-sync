@@ -277,8 +277,11 @@
     // Accept connection  
     function acceptSync() {  
         if (pendingConn) {  
-            conn = pendingConn;  
-            setupConnectionListeners();  
+            conn = pendingConn;
+
+            // ✅ Send ACCEPT signal
+            conn.send({ type: "accept" });
+
             logSync("Sync Accepted. Establishing tunnel...", true);  
         }  
         hideSyncPopup();  
@@ -287,6 +290,7 @@
     // Reject connection  
     function rejectSync() {  
         if (pendingConn) {  
+            pendingConn.send({ type: "reject" }); // notify sender
             pendingConn.close();  
             logSync("Sync Request Rejected.");  
         }  
@@ -334,9 +338,13 @@
             logSync("Neural Link Online. Ready for Sync.", true);  
         });  
 
-        // ✅ FIX: removed duplicate pendingConn declaration
         peer.on('connection', (incomingConn) => {  
-            pendingConn = incomingConn;  
+            pendingConn = incomingConn;
+
+            // ✅ Attach listeners immediately
+            conn = incomingConn;
+            setupConnectionListeners();
+
             logSync("Incoming Sync Request Detected...");  
             showSyncPopup();  
         });  
@@ -359,14 +367,37 @@
     function setupConnectionListeners() {  
         if (!conn) return;  
 
+        let isAccepted = false; // ✅ handshake state
+
         conn.on('open', () => {  
-            logSync("P2P Tunnel Secure. Data Syncing Active.", true);  
-            document.getElementById('btn-to-chat').disabled = false;  
-            document.getElementById('btn-to-chat').innerText = "Access Chat Tunnel";  
+            logSync("Connection Established. Waiting for approval...");  
         });  
 
         conn.on('data', (data) => {  
-            appendChatMessage("Peer", data, 'received');  
+
+            // ✅ HANDLE HANDSHAKE
+            if (typeof data === "object") {
+
+                if (data.type === "accept") {
+                    isAccepted = true;
+
+                    logSync("P2P Tunnel Secure. Data Syncing Active.", true);  
+                    document.getElementById('btn-to-chat').disabled = false;  
+                    document.getElementById('btn-to-chat').innerText = "Access Chat Tunnel";  
+                    return;
+                }
+
+                if (data.type === "reject") {
+                    logSync("Peer Rejected Sync Request.");  
+                    conn.close();
+                    return;
+                }
+            }
+
+            // ✅ Only allow chat AFTER accept
+            if (isAccepted) {
+                appendChatMessage("Peer", data, 'received');  
+            }
         });  
 
         conn.on('close', () => {  
