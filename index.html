@@ -1,27 +1,30 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Phantom Sync | Venta Corp</title>
+    <title>Phantom Sync | Venta Corp Upgrade</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
             --obsidian: #0a0a0b;
             --deep-grey: #161618;
             --gold: #d4af37;
-            --gold-muted: rgba(212, 175, 55, 0.2);
+            --gold-glow: rgba(212, 175, 55, 0.4);
+            --gold-muted: rgba(212, 175, 55, 0.1);
             --glass: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(212, 175, 55, 0.15);
-            --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            --glass-border: rgba(212, 175, 55, 0.2);
+            --error: #ff4444;
+            --success: #44ff44;
+            --transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
         body {
             background-color: var(--obsidian);
             color: #e0e0e0;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
             height: 100vh;
             display: flex;
@@ -29,281 +32,184 @@
             overflow: hidden;
         }
 
+        /* --- POPUP SYSTEM (Samsung One UI Style) --- */
+        #notification-popup {
+            position: fixed;
+            top: -100px; left: 50%;
+            transform: translateX(-50%);
+            width: 90%; max-width: 400px;
+            background: rgba(20, 20, 22, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--gold-border);
+            border-radius: 24px;
+            padding: 20px;
+            z-index: 9999;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px var(--gold-muted);
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #notification-popup.active { top: 20px; }
+
+        .popup-header { display: flex; align-items: center; gap: 12px; }
+        .popup-icon { width: 40px; height: 40px; background: var(--gold-muted); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--gold); }
+        .popup-body b { color: var(--gold); display: block; margin-bottom: 4px; }
+        .popup-body span { font-size: 0.85rem; color: #aaa; font-family: monospace; }
+        
+        .popup-actions { display: flex; gap: 10px; }
+        .popup-btn { flex: 1; padding: 12px; border-radius: 14px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-accept { background: var(--gold); color: black; }
+        .btn-reject { background: #222; color: white; }
+        .popup-btn:active { transform: scale(0.95); opacity: 0.8; }
+
         /* --- SCREEN SYSTEM --- */
         .screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             display: none;
             flex-direction: column;
-            padding: 30px;
+            padding: 25px;
             opacity: 0;
-            transform: translateY(20px);
+            transform: scale(0.98);
             transition: var(--transition);
         }
 
-        .screen.active {
-            display: flex;
-            opacity: 1;
-            transform: translateY(0);
+        .screen.active { display: flex; opacity: 1; transform: scale(1); }
+
+        /* --- UI COMPONENTS --- */
+        .gold-label { color: var(--gold); letter-spacing: 2px; text-transform: uppercase; font-size: 0.75rem; font-weight: 700; margin-bottom: 5px; display: block; }
+        h1 { font-size: 1.6rem; margin: 5px 0 20px 0; font-weight: 300; letter-spacing: -0.5px; }
+
+        .btn-main {
+            background: var(--gold); color: black; border: none; padding: 18px;
+            border-radius: 16px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.5px; cursor: pointer; transition: var(--transition);
+            margin-top: auto; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
         }
+        .btn-main:disabled { background: #1a1a1c; color: #444; box-shadow: none; cursor: not-allowed; }
+        .btn-main:active:not(:disabled) { transform: scale(0.97); }
 
-        /* --- TYPOGRAPHY & UI ELEMENTS --- */
-        .gold-text { color: var(--gold); letter-spacing: 2px; text-transform: uppercase; font-size: 0.8rem; font-weight: bold; }
-        h1 { font-size: 1.8rem; margin: 10px 0; font-weight: 300; }
-        p { color: #888; line-height: 1.6; font-size: 0.95rem; }
-
-        .btn-gold {
-            background: var(--gold);
-            color: black;
-            border: none;
-            padding: 16px;
-            border-radius: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: var(--transition);
-            margin-top: auto;
-        }
-
-        .btn-gold:disabled { background: #333; color: #666; cursor: not-allowed; }
-
-        .glass-card {
+        .glass-panel {
             background: var(--glass);
             border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
+            border-radius: 22px;
             padding: 20px;
-            margin-top: 20px;
+            margin-bottom: 20px;
         }
 
-        /* --- INTRO SCREEN --- */
-        .guide-step { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 20px; }
-        .step-num { color: var(--gold); border: 1px solid var(--gold); border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; flex-shrink: 0; }
+        /* --- STATUS INDICATOR --- */
+        .status-container { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; font-weight: bold; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); transition: 0.3s; }
+        .status-dot.connecting { background: #ffaa00; box-shadow: 0 0 10px #ffaa00; }
+        .status-dot.secure { background: var(--success); box-shadow: 0 0 12px var(--success); }
 
-        /* --- SYNC SCREEN --- */
-        .vault-key-box { text-align: center; margin-bottom: 30px; }
-        #my-id { font-family: monospace; color: var(--gold); font-size: 1.1rem; display: block; margin-top: 10px; word-break: break-all; }
-        
-        .input-group { display: flex; flex-direction: column; gap: 10px; }
-        input { 
-            background: #121214; border: 1px solid #333; color: white; padding: 15px; 
-            border-radius: 12px; outline: none; transition: var(--transition);
-        }
-        input:focus { border-color: var(--gold); box-shadow: 0 0 15px var(--gold-muted); }
-
+        /* --- SYNC LOGS --- */
         .console {
-            flex: 1; margin-top: 20px; font-family: monospace; font-size: 0.8rem;
-            color: #666; overflow-y: auto; padding: 10px;
+            flex: 1; margin: 20px 0; font-family: 'Cascadia Code', monospace;
+            font-size: 0.75rem; overflow-y: auto; padding: 10px;
+            background: rgba(0,0,0,0.2); border-radius: 12px;
         }
-        .console-log { margin-bottom: 5px; border-left: 2px solid #333; padding-left: 10px; transition: 0.3s; }
-        .log-gold { color: var(--gold); border-left-color: var(--gold); }
+        .log-entry { margin-bottom: 8px; line-height: 1.4; color: #666; animation: fadeIn 0.3s ease; }
+        .log-time { color: #444; margin-right: 8px; }
+        .log-gold { color: var(--gold); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-5px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* --- CHAT SCREEN --- */
-        #chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 10px 0; }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; animation: msgIn 0.3s ease; }
-        @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
+        /* --- CHAT SYSTEM --- */
+        #chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 15px 0; }
+        .msg { max-width: 80%; padding: 14px 18px; border-radius: 20px; font-size: 0.9rem; position: relative; }
         .msg.sent { align-self: flex-end; background: var(--gold-muted); border: 1px solid var(--gold-border); border-bottom-right-radius: 4px; color: #fff; }
-        .msg.received { align-self: flex-start; background: var(--glass); border: 1px solid var(--glass-border); border-bottom-left-radius: 4px; backdrop-filter: blur(5px); }
+        .msg.received { align-self: flex-start; background: #1a1a1c; border: 1px solid #333; border-bottom-left-radius: 4px; }
 
-        .chat-input-area { display: flex; gap: 10px; padding-top: 15px; border-top: 1px solid #222; }
-
-        /* Status Indicator */
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4444; display: inline-block; margin-right: 5px; }
-        .status-dot.online { background: #44ff44; box-shadow: 0 0 10px #44ff44; }
-
+        .chat-input-bar { display: flex; gap: 10px; padding: 15px 0; border-top: 1px solid #222; }
+        .chat-input-bar input { flex: 1; background: #121214; border: 1px solid #333; color: white; padding: 14px; border-radius: 14px; }
     </style>
 </head>
 <body>
 
-    <section id="screen-guide" class="screen active">
-        <span class="gold-text">Venta Corporation</span>
-        <h1>Phantom Sync Setup</h1>
-        <p>Establish a direct neural tunnel between two devices. For best results, use a local hotspot.</p>
-        
-        <div class="glass-card">
-            <div class="guide-step">
-                <div class="step-num">1</div>
-                <div><strong style="color:white">Hotspot</strong><br><small>Turn ON hotspot on one device.</small></div>
-            </div>
-            <div class="guide-step">
-                <div class="step-num">2</div>
-                <div><strong style="color:white">Connect</strong><br><small>Join the same network on device two.</small></div>
-            </div>
-            <div class="guide-step">
-                <div class="step-num">3</div>
-                <div><strong style="color:white">Proximity</strong><br><small>Keep devices within 10 meters.</small></div>
+    <div id="notification-popup">
+        <div class="popup-header">
+            <div class="popup-icon">⚡</div>
+            <div class="popup-body">
+                <b>Incoming Sync Request</b>
+                <span id="incoming-peer-id">PEER: ----</span>
             </div>
         </div>
+        <div class="popup-actions">
+            <button class="popup-btn btn-reject" onclick="rejectConnection()">Reject</button>
+            <button class="popup-btn btn-accept" onclick="acceptConnection()">Accept</button>
+        </div>
+    </div>
 
-        <button class="btn-gold" onclick="checkNetworkAndProceed()">Continue</button>
+    <section id="screen-guide" class="screen active">
+        <span class="gold-label">Venta Systems</span>
+        <h1>Phantom Guide</h1>
+        <p>Establish an encrypted peer-to-peer bridge. Best performance on local Hotspot/WiFi.</p>
+        
+        <div class="glass-panel">
+            <div style="margin-bottom:15px"><b>1. Network Pairing</b><br><small>Connect both devices to the same Hotspot.</small></div>
+            <div style="margin-bottom:15px"><b>2. Handshake</b><br><small>Exchange Vault Keys to initiate sync.</small></div>
+            <div><b>3. Secure Tunnel</b><br><small>Traffic is P2P and bypasses central servers.</small></div>
+        </div>
+
+        <button class="btn-main" onclick="checkNetworkAndProceed()">Initialize Setup</button>
     </section>
 
     <section id="screen-sync" class="screen">
-        <span class="gold-text">Neural Link</span>
-        <h1>Vault Synchronization</h1>
+        <div style="display:flex; justify-content:space-between">
+            <span class="gold-label">Vault Link</span>
+            <div class="status-container">
+                <div id="sync-dot" class="status-dot"></div>
+                <span id="sync-status-text">NOT CONNECTED</span>
+            </div>
+        </div>
+        <h1>Synchronization</h1>
 
-        <div class="vault-key-box glass-card">
-            <small>YOUR VAULT KEY</small>
-            <span id="my-id">Initializing...</span>
+        <div class="glass-panel" style="text-align:center">
+            <small class="gold-label" style="font-size:0.6rem">Your Local Vault Key</small>
+            <code id="my-id" style="color:var(--gold); font-size:1rem">--- --- ---</code>
         </div>
 
-        <div class="input-group">
-            <input type="text" id="peer-id-input" placeholder="Enter Peer Vault Key">
-            <button class="btn-gold" style="margin-top:0" onclick="connectToPeer()">Sync Tunnel</button>
+        <div style="display:flex; flex-direction:column; gap:10px">
+            <input type="text" id="peer-id-input" placeholder="Enter Peer Vault Key" style="background:#121214; border:1px solid #333; color:white; padding:16px; border-radius:14px">
+            <button id="btn-sync-action" class="btn-main" style="margin-top:0" onclick="connectToPeer()">Sync Tunnel</button>
         </div>
 
-        <div class="console" id="sync-console">
-            <div class="console-log">Ready for handshake...</div>
-        </div>
+        <div style="margin-top:15px"><small class="gold-label" style="opacity:0.6">Mode: Local Phantom Sync (P2P)</small></div>
 
-        <button id="btn-to-chat" class="btn-gold" disabled onclick="showScreen('screen-chat')">Continue to Chat</button>
+        <div class="console" id="sync-console"></div>
+
+        <button id="btn-to-chat" class="btn-main" disabled onclick="tryEnterChat()">Continue to Chat</button>
     </section>
 
     <section id="screen-chat" class="screen">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span class="gold-text">Secure Tunnel</span>
-            <div id="connection-status"><span class="status-dot online"></span><small>SECURE</small></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #222; padding-bottom:10px">
+            <div><span class="gold-label">Phantom Hub</span><small style="color:#555">E2EE Active</small></div>
+            <div class="status-container"><div class="status-dot secure"></div><span>SECURE</span></div>
         </div>
         
-        <div id="chat-messages">
-            </div>
+        <div id="chat-messages"></div>
 
-        <div class="chat-input-area">
-            <input type="text" id="chat-msg-input" placeholder="Type encrypted message..." style="flex:1">
-            <button class="btn-gold" style="margin-top:0; padding: 10px 20px;" onclick="handleSendMessage()">SEND</button>
+        <div class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Secure transmission...">
+            <button class="btn-main" style="margin-top:0; padding:10px 20px" onclick="handleSend()">SEND</button>
         </div>
     </section>
 
-
-<!-- 🔔 Phantom Sync Incoming Popup -->
-<div id="sync-popup" class="sync-popup hidden">
-    <div class="popup-card">
-        <div class="popup-header">
-            <span class="gold-text">Phantom Sync</span>
-            <small>Incoming Request</small>
-        </div>
-
-        <div class="popup-body">
-            <p>A device is requesting a secure tunnel connection.</p>
-        </div>
-
-        <div class="popup-actions">
-            <button class="btn-reject" onclick="rejectSync()">Reject</button>
-            <button class="btn-accept" onclick="acceptSync()">Accept</button>
-        </div>
-    </div>
-</div>
-
-<style>
-    /* 🔔 POPUP STYLE */
-.sync-popup {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(-20px);
-    width: 90%;
-    max-width: 400px;
-    z-index: 9999;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.4s ease;
-}
-
-.sync-popup.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-    pointer-events: auto;
-}
-
-.popup-card {
-    background: rgba(20, 20, 22, 0.95);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    backdrop-filter: blur(12px);
-    border-radius: 16px;
-    padding: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-}
-
-.popup-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.popup-body {
-    font-size: 0.9rem;
-    color: #aaa;
-}
-
-.popup-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 15px;
-}
-
-.btn-accept {
-    flex: 1;
-    background: var(--gold);
-    border: none;
-    padding: 10px;
-    border-radius: 10px;
-    font-weight: bold;
-}
-
-.btn-reject {
-    flex: 1;
-    background: #222;
-    border: none;
-    color: #aaa;
-    padding: 10px;
-    border-radius: 10px;
-}
-</style>
-<script>
-    
-
-// Show popup
-function showSyncPopup() {
-    document.getElementById("sync-popup").classList.add("show");
-}
-
-// Hide popup
-function hideSyncPopup() {
-    document.getElementById("sync-popup").classList.remove("show");
-}
-
-// Accept connection
-function acceptSync() {
-    if (!pendingConn) return;
-
-    conn = pendingConn;
-
-    setupConnectionListeners(); // ✅ attach listeners AFTER accept
-
-    logSync("Sync Accepted. Establishing tunnel...", true);
-
-    hideSyncPopup();
-}
-
-// Reject connection
-function rejectSync() {
-    if (pendingConn) {
-        pendingConn.close();
-        logSync("Sync Request Rejected.");
-    }
-    hideSyncPopup();
-}
-</script>
     <script>
-let peer = null;
-let conn = null;
-let pendingConn = null; // ✅ ONLY HERE
+        let peer = null;
+        let conn = null;
+        let pendingConn = null;
+        let connectTimeout = null;
 
-        // --- NAVIGATION LOGIC ---
+        // --- UI NAVIGATION ---
         function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(s => {
+                s.classList.remove('active');
+                setTimeout(() => { if(!s.classList.contains('active')) s.style.display = 'none'; }, 400);
+            });
             const target = document.getElementById(screenId);
             target.style.display = 'flex';
             setTimeout(() => target.classList.add('active'), 50);
@@ -311,19 +217,21 @@ let pendingConn = null; // ✅ ONLY HERE
 
         function checkNetworkAndProceed() {
             if (!navigator.onLine) {
-                alert("OFFLINE: Please connect to WiFi or Hotspot first.");
+                alert("OFFLINE: Device is offline. Connect to WiFi or Hotspot.");
                 return;
             }
+            logSync("Notice: For best results, ensure same WiFi/Hotspot.", true);
             showScreen('screen-sync');
             initPeer();
         }
 
-        // --- PEER LOGIC ---
+        // --- PEER ENGINE ---
         function initPeer() {
             if(peer) return;
-
+            logSync("Initializing Neural Link...");
+            
             peer = new Peer(null, {
-                debug: 2,
+                debug: 1,
                 config: {
                     'iceServers': [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -334,75 +242,141 @@ let pendingConn = null; // ✅ ONLY HERE
 
             peer.on('open', (id) => {
                 document.getElementById('my-id').innerText = id;
-                logSync("Neural Link Online. Ready for Sync.", true);
+                logSync("Vault Online. ID Registered.", true);
             });
 
-            // Handle incoming connection
-            let pendingConn = null;
-
-peer.on('connection', (incomingConn) => {
-    pendingConn = incomingConn;
-    logSync("Incoming Sync Request Detected...");
-    showSyncPopup();
-});
+            peer.on('connection', (incoming) => {
+                pendingConn = incoming;
+                showNotification(incoming.peer);
+                logSync("Incoming Sync Request Detected...");
+            });
 
             peer.on('error', (err) => {
-                logSync("Connection Failed: " + err.type);
-                alert("PeerJS Error: " + err.type);
+                let msg = "Network Error";
+                if(err.type === 'peer-not-found') msg = "Peer not found. Check key.";
+                if(err.type === 'network') msg = "Connection blocked by network.";
+                logSync(msg);
+                resetSyncButton();
             });
         }
 
         function connectToPeer() {
             const remoteId = document.getElementById('peer-id-input').value.trim();
-            if (!remoteId) return alert("Enter a Peer Vault Key first.");
+            if (!remoteId) return alert("Enter Peer Vault Key");
 
-            logSync("Attempting Tunnel to " + remoteId.substring(0,8) + "...");
+            setSyncState('connecting');
+            logSync(`Attempting Tunnel to [${remoteId.substring(0,8)}]...`);
+
             conn = peer.connect(remoteId, { reliable: true });
+
+            // Connection Timeout Logic
+            connectTimeout = setTimeout(() => {
+                if (!conn || !conn.open) {
+                    logSync("Connection Timeout. Ensure same network.", false);
+                    conn.close();
+                    setSyncState('disconnected');
+                }
+            }, 8000);
+
             setupConnectionListeners();
         }
 
         function setupConnectionListeners() {
-    if (!conn) return;
+            conn.on('open', () => {
+                clearTimeout(connectTimeout);
+                setSyncState('secure');
+                logSync("P2P Tunnel Secure. Data Syncing Active.", true);
+                document.getElementById('btn-to-chat').disabled = false;
+            });
 
-    conn.on('open', () => {
-        logSync("P2P Tunnel Secure. Data Syncing Active.", true);
+            conn.on('data', (data) => {
+                appendMsg("Peer", data, 'received');
+            });
 
-        document.getElementById('btn-to-chat').disabled = false;
-        document.getElementById('btn-to-chat').innerText = "Access Chat Tunnel";
+            conn.on('close', () => {
+                setSyncState('disconnected');
+                logSync("Tunnel Collapsed.");
+                document.getElementById('btn-to-chat').disabled = true;
+            });
+        }
 
-        // ✅ update status indicator
-        document.querySelector('.status-dot').classList.add('online');
-    });
+        // --- NOTIFICATION SYSTEM ---
+        function showNotification(peerId) {
+            document.getElementById('incoming-peer-id').innerText = `VAULT: ${peerId.substring(0,8)}...`;
+            document.getElementById('notification-popup').classList.add('active');
+        }
 
-    conn.on('data', (data) => {
-        appendChatMessage("Peer", data, 'received');
-    });
+        function acceptConnection() {
+            conn = pendingConn;
+            setupConnectionListeners();
+            document.getElementById('notification-popup').classList.remove('active');
+            logSync("Handshake Accepted.", true);
+        }
 
-    conn.on('close', () => {
-        logSync("Tunnel Collapsed.");
+        function rejectConnection() {
+            if(pendingConn) pendingConn.close();
+            document.getElementById('notification-popup').classList.remove('active');
+            logSync("Connection Rejected.");
+        }
 
-        document.getElementById('btn-to-chat').disabled = true;
-        document.querySelector('.status-dot').classList.remove('online');
-    });
+        // --- STATE MANAGEMENT ---
+        function setSyncState(state) {
+            const dot = document.getElementById('sync-dot');
+            const txt = document.getElementById('sync-status-text');
+            const btn = document.getElementById('btn-sync-action');
 
-    conn.on('error', (err) => {
-        logSync("Connection Error: " + err.type);
-    });
-}
+            dot.className = 'status-dot';
+            btn.disabled = false;
 
-        // --- CHAT LOGIC ---
-        function handleSendMessage() {
-            const input = document.getElementById('chat-msg-input');
+            if(state === 'connecting') {
+                dot.classList.add('connecting');
+                txt.innerText = "CONNECTING...";
+                btn.innerText = "CONNECTING...";
+                btn.disabled = true;
+            } else if(state === 'secure') {
+                dot.classList.add('secure');
+                txt.innerText = "SECURE TUNNEL ACTIVE";
+                btn.innerText = "CONNECTED";
+                btn.disabled = true;
+            } else {
+                txt.innerText = "NOT CONNECTED";
+                btn.innerText = "Sync Tunnel";
+            }
+        }
+
+        function resetSyncButton() {
+            setSyncState('disconnected');
+        }
+
+        function tryEnterChat() {
+            if(conn && conn.open) {
+                showScreen('screen-chat');
+            } else {
+                alert("No active Phantom Tunnel detected.");
+            }
+        }
+
+        // --- UTILS ---
+        function logSync(msg, isGold = false) {
+            const console = document.getElementById('sync-console');
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${isGold ? 'log-gold' : ''}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${msg}`;
+            console.prepend(entry);
+        }
+
+        function handleSend() {
+            const input = document.getElementById('chat-input');
             const msg = input.value.trim();
-            
-            if (msg && conn && conn.open) {
+            if(msg && conn && conn.open) {
                 conn.send(msg);
-                appendChatMessage("You", msg, 'sent');
+                appendMsg("You", msg, 'sent');
                 input.value = "";
             }
         }
 
-        function appendChatMessage(sender, text, type) {
+        function appendMsg(sender, text, type) {
             const container = document.getElementById('chat-messages');
             const div = document.createElement('div');
             div.className = `msg ${type}`;
@@ -411,23 +385,9 @@ peer.on('connection', (incomingConn) => {
             container.scrollTop = container.scrollHeight;
         }
 
-        function logSync(msg, isGold = false) {
-            const consoleBox = document.getElementById('sync-console');
-            const entry = document.createElement('div');
-            entry.className = `console-log ${isGold ? 'log-gold' : ''}`;
-            entry.innerText = `> ${msg}`;
-            consoleBox.prepend(entry);
-        }
-
-        // Handle Enter Key
-        document.getElementById('chat-msg-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleSendMessage();
-        });
-
-        document.getElementById('peer-id-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') connectToPeer();
-        });
-
+        document.getElementById('chat-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleSend(); });
     </script>
 </body>
 </html>
+
+    
