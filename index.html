@@ -403,12 +403,26 @@ const rtdb = getDatabase(app);
 let myUID = null;
 
 // Get current logged in user
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        myUID = user.uid;
-        loadActiveUsers();
-        listenForRequests();
+onAuthStateChanged(auth, async (user) => {
+
+    if (!user) {
+        window.location.href = "ooooo1.html";
+        return;
     }
+
+    // Check if user exists in global_users
+    const snap = await get(ref(rtdb, "global_users/" + user.uid));
+
+    if (!snap.exists()) {
+        // Invalid / broken account
+        window.location.href = "ooooo1.html";
+        return;
+    }
+
+    myUID = user.uid;
+
+    loadActiveUsers();
+    listenForRequests();
 });
 
 
