@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gold Hub | Morphic Security</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    
+    
+    
+    <!-- Firebase SDK -->
+<script type="module" src="script.js"></script>
+
+<style>
+    .force-profile .close-btn {
+    display: none;
+}
+</style>
+    <style>
+        :root { --gold: #D4AF37; --bg-dark: #050505; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: white; height: 100dvh; margin: 0; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* --- BLUR SYSTEM --- */
+        #auth-landing, #phantom-layer { transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        body.panel-active #auth-landing { filter: blur(40px); transform: scale(0.9); opacity: 0.3; pointer-events: none; }
+        body.panel-active #phantom-layer { filter: blur(25px); opacity: 0.05; pointer-events: none; }
+
+        /* --- UI ELEMENTS --- */
+        .btn-gold { background: var(--gold); color: black; font-weight: 700; padding: 16px; border-radius: 20px; width: 100%; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; font-size: 13px; cursor: pointer; border: none; }
+        .btn-outline { border: 1px solid rgba(212, 175, 55, 0.4); color: var(--gold); background: rgba(212, 175, 55, 0.05); font-weight: 700; padding: 16px; border-radius: 20px; width: 100%; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; font-size: 13px; cursor: pointer; }
+
+        /* --- PHANTOM HUB --- */
+        #phantom-layer { position: fixed; bottom: 30px; left: 30px; z-index: 100; }
+        .phantom-btn { width: 60px; height: 60px; background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden; }
+        .phantom-btn.expanded { width: 280px; height: 380px; border-radius: 35px; padding: 20px; display: flex; flex-direction: column; }
+        .phantom-grid { display: none; grid-template-columns: repeat(2, 1fr); gap: 15px; flex: 1; width: 100%; }
+        .phantom-btn.expanded .phantom-grid { display: grid; }
+        .phantom-btn.expanded .p-icon { display: none; }
+        .phantom-item { display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; transition: 0.3s; cursor: pointer; }
+        .phantom-item:hover { background: rgba(212, 175, 55, 0.1); border-color: var(--gold); }
+
+        /* --- MORPHING PANEL --- */
+        .content-panel {
+            position: fixed; top: 50%; left: 50%; 
+            width: 92%; max-width: 440px; 
+            background: rgba(15, 15, 15, 0.95); backdrop-filter: blur(60px);
+            border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 40px;
+            padding: 40px 30px; z-index: 2000;
+            opacity: 0; pointer-events: none;
+            transform: translate(-50%, -50%) scale(0.6);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+        }
+        .content-panel.active { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+        .panel-close-btn { position: absolute; top: 25px; right: 25px; width: 38px; height: 38px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2001; }
+
+        /* --- FORMS & GRID --- */
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; font-size: 9px; font-weight: 800; color: #666; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 2px; }
+        .input-field { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 18px; color: white; outline: none; transition: 0.3s; }
+        .input-field:focus { border-color: var(--gold); background: rgba(212, 175, 55, 0.05); }
+
+        .recovery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 20px 0; }
+        .grid-box { aspect-ratio: 1/1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; cursor: pointer; }
+        .grid-box.red { background: #ff4d4d !important; box-shadow: 0 0 15px rgba(255, 77, 77, 0.4); }
+        .grid-box.green { background: #00e676 !important; box-shadow: 0 0 15px rgba(0, 230, 118, 0.4); }
+        .grid-box.blue { background: #2979ff !important; box-shadow: 0 0 15px rgba(41, 121, 255, 0.4); }
+
+        .step-layer { animation: morphIn 0.4s ease forwards; }
+        @keyframes morphIn { from { opacity: 0; filter: blur(10px); } to { opacity: 1; filter: blur(0); } }
+        
+        
+        /* --- NAV ICONS --- */
+        #panel-nav-container { position: absolute; top: 25px; left: 25px; display: none; gap: 10px; z-index: 2001; }
+        .nav-btn { width: 38px; height: 38px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; color: #444; }
+        .nav-btn.active { color: var(--gold); background: rgba(212, 175, 55, 0.1); }
+        .nav-btn:hover { background: rgba(255,255,255,0.1); }
+        
+        #panel-content {
+            padding-top: 40px;
+        }
+        
+        
+        
+    </style>
+</head>
+<body onclick="handleGlobalClick(event)">
+
+    <div id="auth-landing" class="text-center w-full max-w-sm px-8">
+        <div class="mb-12">
+            <h1 class="text-4xl font-black tracking-tighter">GOLD<span class="text-[#D4AF37]">HUB</span></h1>
+            <p class="text-gray-500 text-[11px] font-bold mt-4 tracking-[0.3em] uppercase">Morphic Auth Interface</p>
+        </div>
+        <div class="space-y-4">
+            <button onclick="openLogin(event)" class="btn-gold">Login to Hub</button>
+            <button onclick="openCreateAccount(event)" class="btn-outline">Create Account</button>
+        </div>
+    </div>
+
+    <div id="phantom-layer">
+        <div id="phantom-btn" class="phantom-btn" onclick="togglePhantom(event)">
+            <div class="p-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <div class="phantom-grid" id="phantom-grid-content"></div>
+        </div>
+    </div>
+
+    <div id="main-panel" class="content-panel" onclick="event.stopPropagation()">
+        
+        <div id="panel-nav-container">
+            <div id="nav-back" class="nav-btn" onclick="goBack(event)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <div id="nav-forward" class="nav-btn" onclick="goForward(event)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+        </div>
+        
+        <div class="panel-close-btn" onclick="closeAllPanels(event)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </div>
+        <div id="panel-content"></div>
+    </div>
+
+
+
+<script>
+    /* --- DATA STATE --- */
+    let registrationData = {
+        email: "",
+        password: "",
+        username: "",
+        dob: "",
+        vaultKey: "",
+        recoveryPattern: []
+    };
+
+    let recoveryPattern = [];
+    let currentStep = 0;
+    let flowSteps = [];
+
+    const PHANTOM_DATA = [
+        { id: 'home', label: 'Home', icon: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', desc: 'Central command interface. Manage your high-security assets and system nodes from one unified dashboard.' },
+        { id: 'vault', label: 'Vault', icon: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z', desc: 'Encrypted storage for sensitive metadata. Every byte is fragmented across 12 distributed ledgers.' },
+        { id: 'logs', label: 'Logs', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', desc: 'Immutable activity stream. View real-time security handshakes and access attempts.' },
+        { id: 'net', label: 'Network', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', desc: 'Secure tunnel configuration. Control VPN endpoints and onion-routing protocols.' },
+        { id: 'keys', label: 'Keys', icon: 'M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zM12 7l.5 1 1 .5-1 .5-.5 1-.5-1-1-.5 1-.5.5-1z', desc: 'Hardware key management. Link your physical YubiKeys and biometric security tokens.' },
+        { id: 'ai', label: 'Neural', icon: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z', desc: 'AI Security Agent. Predictive threat detection actively scanning your perimeter for anomalies.' }
+    ];
+
+    /* --- RECOVERY SYSTEM --- */
+    
+   // ===== RECOVERY STATE (Single Source of Truth) =====
+let recoveryState = {
+    email: "",
+    username: "",
+    dob: "",
+    vaultKey: "",
+    pattern: []
+};
+
+function resetRecoveryData() {
+    // Keep your original logic and variable resets
+    recoveryState = {
+        email: "",
+        username: "",
+        dob: "",
+        vaultKey: "",
+        pattern: []
+    };
+    
+    // Supporting global reset if needed by your app
+    if (typeof registrationData !== 'undefined') {
+        registrationData = {
+            email: "",
+            password: "",
+            username: "",
+            dob: "",
+            vaultKey: "",
+            recoveryPattern: []
+        };
+    }
+}
+
+function openRecovery(e) {
+    if (e) e.stopPropagation();
+
+    resetRecoveryData();
+
+    document.body.classList.add("panel-active");
+
+    showRecoveryStep1();
+}
+
+function showRecoveryStep1() {
+    const content = document.getElementById("panel-content");
+
+    content.innerHTML = `
+        <div class="step-layer">
+            <h2 class="text-3xl font-black mb-1">Vault Recovery</h2>
+            <p class="text-gray-500 text-sm mb-10 font-medium">Initiate identity handshake protocol.</p>
+            <div class="input-group">
+                <label>Registered Email</label>
+                <input id="rec-email" class="input-field" type="email" placeholder="identity@goldhub.com">
+            </div>
+            <button class="btn-gold" onclick="saveStep1()">Continue Handshake</button>
+        </div>
+    `;
+}
+
+function saveStep1() {
+    const email = document.getElementById("rec-email")?.value.trim();
+
+    if (!email) {
+        alert("Please enter your registered email.");
+        return;
+    }
+
+    recoveryState.email = email;
+    showRecoveryStep2();
+}
+
+function showRecoveryStep2() {
+    const content = document.getElementById("panel-content");
+
+    content.innerHTML = `
+        <div class="step-layer">
+            <h2 class="text-2xl font-black mb-1">Verify Metadata</h2>
+            <p class="text-gray-500 text-[10px] mb-8 font-bold uppercase tracking-widest">Confirm account parameters</p>
+            <div class="input-group">
+                <label>System Username</label>
+                <input id="rec-user" class="input-field" placeholder="morph_user_01" value="${recoveryState.username}">
+            </div>
+            <div class="input-group">
+                <label>Date of Birth</label>
+                <input id="rec-dob" type="date" class="input-field" style="color-scheme: dark;" value="${recoveryState.dob}">
+            </div>
+            <button class="btn-gold" onclick="saveStep2()">Next: Security Node</button>
+        </div>
+    `;
+}
+
+function saveStep2() {
+    const user = document.getElementById("rec-user")?.value.trim();
+    const dob  = document.getElementById("rec-dob")?.value;
+
+    if (!user || !dob) {
+        alert("Handshake Failed: Valid metadata required to proceed.");
+        return;
+    }
+
+    recoveryState.username = user;
+    recoveryState.dob = dob;
+
+    showRecoveryStep3();
+}
+
+function showRecoveryStep3() {
+    const content = document.getElementById("panel-content");
+
+    content.innerHTML = `
+        <div class="step-layer">
+            <h2 class="text-2xl font-black mb-1">Security Node</h2>
+            <p class="text-gray-500 text-[10px] mb-8 font-bold uppercase tracking-widest">Two-Factor Authentication</p>
+            <div class="input-group">
+                <label>Emergency Recovery Key</label>
+                <input id="rec-vault" class="input-field" placeholder="XXXX-XXXX-XXXX-XXXX">
+            </div>
+            <div class="bg-gold/5 border border-gold/20 p-4 rounded-2xl mb-6">
+                <p class="text-[9px] text-gray-400 font-medium italic">
+                    If you lost your hardware key, proceed to the visual recovery grade pattern.
+                </p>
+            </div>
+            <button class="btn-gold" onclick="saveStep3()">Continue to Grade</button>
+        </div>
+    `;
+}
+
+function saveStep3() {
+    const key = document.getElementById("rec-vault")?.value.trim();
+
+    if (!key) {
+        alert("Enter vault key");
+        return;
+    }
+
+    recoveryState.vaultKey = key;
+    showRecoveryStep4();
+}
+
+function showRecoveryStep4() {
+    recoveryState.pattern = [];
+
+    const content = document.getElementById("panel-content");
+
+    content.innerHTML = `
+        <div class="step-layer">
+            <h2 class="text-2xl font-black mb-2">Recovery Grade</h2>
+            <p class="text-gray-500 text-[10px] mb-4 font-bold uppercase tracking-widest text-center">Confirm visual pattern sequence</p>
+            
+            <div class="recovery-grid">
+                ${Array(9).fill(0).map((_, i) => `
+                    <div class="grid-box"
+                        data-i="${i}"
+                        onclick="clickPattern(${i})">
+                    </div>
+                `).join("")}
+            </div>
+
+            <button
+                id="verifyBtn"
+                disabled
+                class="btn-gold"
+                style="opacity:.5; margin-top: 20px;"
+                onclick="finishRecovery()">
+                Verify Pattern
+            </button>
+        </div>
+    `;
+}
+
+function clickPattern(i) {
+    if (recoveryState.pattern.length >= 3) return;
+
+    const box = document.querySelector(`.grid-box[data-i="${i}"]`);
+
+    if (box.classList.contains("selected")) return;
+
+    const colors = ["red", "green", "blue"];
+    box.style.background = colors[recoveryState.pattern.length];
+    box.classList.add("selected");
+
+    recoveryState.pattern.push(i);
+
+    if (recoveryState.pattern.length === 3) {
+        const btn = document.getElementById("verifyBtn");
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    }
+}
+
+function finishRecovery() {
+    if (recoveryState.pattern.length !== 3) {
+        alert("Complete pattern");
+        return;
+    }
+
+    // Trigger your final processing logic
+    recoverAccount(
+        recoveryState.email,
+        recoveryState.username,
+        recoveryState.dob,
+        recoveryState.vaultKey,
+        recoveryState.pattern
+    );
+}
+
+
+
+  
+
+    /* --- NAVIGATION SYSTEM --- */
+    window.addEventListener('popstate', function(event) {
+        closeAllPanels(null, false); 
+        document.getElementById('phantom-btn').classList.remove('expanded');
+    });
+
+    function pushNavigationState() {
+        if (!window.history.state || window.history.state.active !== true) {
+            window.history.pushState({ active: true }, "");
+        }
+    }
+
+    function updateNavVisibility() {
+        const container = document.getElementById('panel-nav-container');
+        const back = document.getElementById('nav-back');
+        const forward = document.getElementById('nav-forward');
+        
+        if (container && flowSteps.length > 0) {
+            container.style.display = 'flex';
+            back.classList.toggle('active', currentStep > 0);
+            forward.classList.toggle('active', currentStep < flowSteps.length - 1);
+        } else if(container) {
+            container.style.display = 'none';
+        }
+    }
+
+    function goBack(e) {
+        if(e) e.stopPropagation();
+        if (currentStep > 0) {
+            currentStep--;
+            flowSteps[currentStep](e);
+        }
+    }
+
+    function goForward(e) {
+        if(e) e.stopPropagation();
+        if (currentStep < flowSteps.length - 1) {
+            currentStep++;
+            flowSteps[currentStep](e);
+        }
+    }
+
+    function init() {
+        const grid = document.getElementById('phantom-grid-content');
+        if(grid) {
+            grid.innerHTML = PHANTOM_DATA.map(i => `
+                <div class="phantom-item" onclick="openIconPanel('${i.id}', event)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${i.icon}"/></svg>
+                    <span class="text-[8px] mt-2 font-black uppercase text-gray-500">${i.label}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    function togglePhantom(e) {
+        e.stopPropagation();
+        const hub = document.getElementById('phantom-btn');
+        hub.classList.toggle('expanded');
+        if (hub.classList.contains('expanded')) {
+            pushNavigationState();
+        }
+    }
+
+    function openIconPanel(id, e) {
+        e.stopPropagation();
+        pushNavigationState();
+        flowSteps = [];
+        currentStep = 0;
+        updateNavVisibility();
+        
+        const item = PHANTOM_DATA.find(x => x.id === id);
+        document.body.classList.add('panel-active');
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <div class="w-16 h-16 bg-gold/10 border border-gold/30 rounded-3xl flex items-center justify-center mb-6">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2"><path d="${item.icon}"/></svg>
+                </div>
+                <h2 class="text-3xl font-black mb-2">${item.label}</h2>
+                <p class="text-gray-500 text-sm font-medium mb-8 leading-relaxed">${item.desc}</p>
+                <button class="btn-gold" onclick="openFinishProfile('gnghhjhhjbnb')">Synchronize</button>
+            </div>
+        `;
+        document.getElementById('main-panel').classList.add('active');
+    }
+
+    /* --- AUTH PANELS --- */
+    function openLogin(e) {
+        e.stopPropagation();
+        pushNavigationState();
+        flowSteps = [];
+        currentStep = 0;
+        updateNavVisibility();
+        
+        document.body.classList.add('panel-active');
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <h2 class="text-3xl font-black mb-1">Login</h2>
+                <p class="text-gray-500 text-sm mb-10 font-medium">Identify yourself to the hub.</p>
+                <div class="input-group">
+                    <label>Identity / Email</label>
+                    <input type="email" class="input-field" placeholder="user@goldhub.net">
+                </div>
+                <div class="input-group">
+                    <label>Security Key / Password</label>
+                    <input type="password" class="input-field" placeholder="••••••••">
+                </div>
+                <p onclick="openRecovery(event)" class="text-right text-[10px] font-black text-[#D4AF37] mb-8 uppercase cursor-pointer">Recovery Required?</p>
+                <button class="btn-gold mb-6" onclick="handleLogin(event)">Access Terminal</button>
+                <div class="space-y-3">
+                    <button class="btn-outline flex items-center justify-center gap-4" onclick="firebaseOAuth('Google')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-2.21 5.39-7.84 5.39-4.84 0-8.79-4.01-8.79-8.94s3.95-8.94 8.79-8.94c2.75 0 4.59 1.16 5.64 2.17l2.58-2.48C18.98 1.18 15.97 0 12.48 0 5.58 0 0 5.58 0 12.48s5.58 12.48 12.48 12.48c7.2 0 12-5.06 12-12.21 0-.82-.09-1.45-.25-2.07l-11.75-.01z"/></svg> Google
+                    </button>
+                    <button class="btn-outline flex items-center justify-center gap-4" onclick="firebaseOAuth('Github')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg> GitHub
+                    </button>
+                </div>
+            </div>
+        `;
+        document.getElementById('main-panel').classList.add('active');
+    }
+
+    function openCreateAccount(e) {
+        if(e) e.stopPropagation();
+        pushNavigationState();
+        flowSteps = [openCreateAccount, stepEmail, stepPassword, stepProfile, stepVaultKey, stepRecovery];
+        currentStep = 0;
+        updateNavVisibility();
+
+        document.body.classList.add('panel-active');
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <h2 class="text-3xl font-black mb-1">Create Account</h2>
+                <p class="text-gray-500 text-sm mb-10 font-medium">Join the secure network.</p>
+                <div class="space-y-4">
+                    <button onclick="stepEmail(event)" class="btn-gold">Register with Email</button>
+                    <button onclick="firebaseOAuth('Google')" class="btn-outline">Register with Google</button>
+                    <button onclick="firebaseOAuth('Github')" class="btn-outline">Register with GitHub</button>
+                </div>
+            </div>
+        `;
+        document.getElementById('main-panel').classList.add('active');
+    }
+
+    /* --- VALIDATION UTILS --- */
+    const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    function stepEmail(e) {
+        if(e) e.stopPropagation();
+        const emailInput = document.getElementById('reg-email-input');
+        
+        if (currentStep === 1 && emailInput) {
+            if (!validateEmail(emailInput.value)) {
+                alert("Invalid Identity Format: Please enter a valid email.");
+                return;
+            }
+            registrationData.email = emailInput.value;
+            stepPassword(e);
+            return;
+        }
+
+        currentStep = 1;
+        updateNavVisibility();
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <h2 class="text-2xl font-black mb-6">Step 1: Identity</h2>
+                <div class="input-group">
+                    <label>Recovery Email</label>
+                    <input 
+    type="email" 
+    id="reg-email-input" 
+    class="input-field" 
+    value="${registrationData.email || ''}" 
+    placeholder="identity@goldhub.com"
+>
+
+                </div>
+                <button class="btn-gold" onclick="stepEmail(event)">Submit Identity</button>
+            </div>
+        `;
+    }
+
+    function stepPassword(e) {
+        if(e) e.stopPropagation();
+        const pass1 = document.getElementById('pass1');
+        const pass2 = document.getElementById('pass2');
+
+        if (currentStep === 2 && pass1) {
+            if (pass1.value.length < 6) {
+                alert("Security Breach: Password must be at least 6 characters.");
+                return;
+            }
+            if (pass1.value !== pass2.value) {
+                alert("Sync Error: Passwords do not match.");
+                return;
+            }
+            registrationData.password = pass1.value;
+            stepProfile(e);
+            return;
+        }
+
+        currentStep = 2;
+        updateNavVisibility();
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <h2 class="text-2xl font-black mb-6">Step 2: Security</h2>
+                <div class="input-group relative">
+                    <label>Secure Password</label>
+                    <input type="password" id="pass1" class="input-field" placeholder="••••••••">
+                    <span onclick="togglePass('pass1')" class="absolute right-4 top-10 cursor-pointer text-gold text-xs font-bold">SHOW</span>
+                </div>
+                <div class="input-group relative">
+                    <label>Confirm Key</label>
+                    <input type="password" id="pass2" class="input-field" placeholder="••••••••">
+                    <span onclick="togglePass('pass2')" class="absolute right-4 top-10 cursor-pointer text-gold text-xs font-bold">SHOW</span>
+                </div>
+                <button class="btn-gold" onclick="stepPassword(event)">Next: Profile Details</button>
+            </div>
+        `;
+    }
+
+    window.togglePass = (id) => {
+        const el = document.getElementById(id);
+        if(el) el.type = el.type === 'password' ? 'text' : 'password';
+    };
+
+    function stepProfile(e) {
+        if(e) e.stopPropagation();
+        const userInp = document.getElementById('reg-user');
+        const dobInp = document.getElementById('reg-dob');
+
+        if (currentStep === 3 && userInp) {
+            if (!userInp.value || !dobInp.value) {
+                alert("Verification Required: Metadata cannot be null.");
+                return;
+            }
+            registrationData.username = userInp.value;
+            registrationData.dob = dobInp.value;
+            stepVaultKey(e);
+            return;
+        }
+
+        currentStep = 3;
+        updateNavVisibility();
+        
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <h2 class="text-2xl font-black mb-6">Step 3: Identity Details</h2>
+                <div class="input-group">
+                    <label>Choose Username</label>
+                    <input type="text" id="reg-user" class="input-field" placeholder="morph_user_01" value="${registrationData.username}">
+                </div>
+                <div class="input-group">
+                    <label>Date of Birth</label>
+                    <input type="date" id="reg-dob" class="input-field" style="color-scheme: dark;" value="${registrationData.dob}">
+                </div>
+                <button class="btn-gold" onclick="stepProfile(event)">Generate Vault Key</button>
+            </div>
+        `;
+    }
+    
+    function generateVaultKey() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        for (let i = 0; i < 12; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return result.match(/.{1,4}/g).join('-');
+    }
+
+    function stepVaultKey(e) {
+        if(e) e.stopPropagation();
+        currentStep = 4;
+        updateNavVisibility();
+
+        if (!registrationData.vaultKey) {
+            registrationData.vaultKey = generateVaultKey();
+        }
+        
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <h2 class="text-2xl font-black mb-1">Vault Access Key</h2>
+                <p class="text-gray-500 text-[10px] mb-8 font-bold uppercase tracking-widest text-center pt-4">Encryption Key Locked</p>
+                <div class="bg-gold/5 border border-gold/20 p-6 rounded-3xl mb-6 text-center">
+                    <p class="text-[10px] text-gray-500 font-bold uppercase mb-3 tracking-tighter">Your Unique Alphanumeric Key</p>
+                    <div class="text-2xl font-mono font-black tracking-widest text-white">${registrationData.vaultKey}</div>
+                </div>
+                <div class="bg-white/5 p-4 rounded-2xl mb-8 flex items-start gap-3">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="2" class="mt-1"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                    <p class="text-[10px] text-gray-400 leading-relaxed font-medium">This key is non-recoverable. If lost, assets will be permanently encrypted.</p>
+                </div>
+                <button class="btn-gold" onclick="stepRecovery(event)">I have secured my key</button>
+            </div>
+        `;
+    }
+
+    function stepRecovery(e) {
+        if(e) e.stopPropagation();
+        currentStep = 5;
+        updateNavVisibility();
+        
+        recoveryPattern = [];
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer">
+                <h2 class="text-2xl font-black mb-2">Step 4: Recovery Grade</h2>
+                <p class="text-gray-500 text-[10px] mb-4 font-bold uppercase tracking-widest text-center">Select 3 boxes (Red > Green > Blue)</p>
+                <div class="recovery-grid">
+                    ${Array(9).fill(0).map((_, i) => `<div class="grid-box" data-idx="${i}" onclick="handleGridClick(${i}, event)"></div>`).join('')}
+                </div>
+                <button class="btn-gold" id="finish-btn" disabled style="opacity: 0.5" onclick="handleRegister(event)">Finalize Setup</button>
+            </div>
+        `;
+    }
+
+    function handleGridClick(idx, e) {
+        e.stopPropagation();
+        if (recoveryPattern.includes(idx) || recoveryPattern.length >= 3) return;
+        const boxes = document.querySelectorAll('.grid-box');
+        recoveryPattern.push(idx);
+        if (recoveryPattern.length === 1) boxes[idx].classList.add('red');
+        if (recoveryPattern.length === 2) boxes[idx].classList.add('green');
+        if (recoveryPattern.length === 3) {
+            boxes[idx].classList.add('blue');
+            const btn = document.getElementById('finish-btn');
+            btn.disabled = false;
+            btn.style.opacity = "1";
+        }
+        registrationData.recoveryPattern = recoveryPattern;
+    }
+
+    function triggerDemo(platform, e) {
+        if(e) e.stopPropagation();
+        document.getElementById('panel-nav-container').style.display = 'none';
+        const content = document.getElementById('panel-content');
+        content.innerHTML = `
+            <div class="step-layer text-center">
+                <h2 class="text-2xl font-black mb-4">Morphic Sync</h2>
+                <p class="text-gray-500 mb-8 font-medium italic">Handshaking with ${platform} external vault...</p>
+                <div class="w-12 h-12 border-4 border-gold/20 border-t-gold rounded-full animate-spin mx-auto"></div>
+            </div>
+        `;
+        setTimeout(() => closeAllPanels(), 2000);
+    }
+
+    function finalizeRegistration(e) {
+        if(e) e.stopPropagation();
+        alert("Morphic Identity Established.");
+        closeAllPanels(e);
+    }
+
+    function closeAllPanels(e, shouldPopHistory = true) {
+    
+    resetRecoveryData();
+    
+        if(e) e.stopPropagation();
+        document.body.classList.remove('panel-active');
+        const mainPanel = document.getElementById('main-panel');
+        if(mainPanel) mainPanel.classList.remove('active');
+        recoveryPattern = [];
+        currentStep = 0;
+        flowSteps = [];
+        updateNavVisibility();
+        
+        if (shouldPopHistory && window.history.state && window.history.state.active) {
+            window.history.back();
+        }
+    }
+
+    function handleGlobalClick(e) {
+        if (document.body.classList.contains('panel-active')) {
+            const panel = document.getElementById('main-panel');
+            if (panel && !panel.contains(e.target)) closeAllPanels();
+        } else {
+            const hub = document.getElementById('phantom-layer');
+            const hubBtn = document.getElementById('phantom-btn');
+            if (hub && hubBtn && !hub.contains(e.target) && hubBtn.classList.contains('expanded')) {
+                hubBtn.classList.remove('expanded');
+                if (window.history.state && window.history.state.active) window.history.back();
+            }
+        }
+    }
+
+    init();
+</script>
+
+
+</body>
+</html>
