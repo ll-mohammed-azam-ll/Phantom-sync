@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -176,6 +176,123 @@
         </div>
     </section>
 
+
+<!-- 🔔 Phantom Sync Incoming Popup -->
+<div id="sync-popup" class="sync-popup hidden">
+    <div class="popup-card">
+        <div class="popup-header">
+            <span class="gold-text">Phantom Sync</span>
+            <small>Incoming Request</small>
+        </div>
+
+        <div class="popup-body">
+            <p>A device is requesting a secure tunnel connection.</p>
+        </div>
+
+        <div class="popup-actions">
+            <button class="btn-reject" onclick="rejectSync()">Reject</button>
+            <button class="btn-accept" onclick="acceptSync()">Accept</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 🔔 POPUP STYLE */
+.sync-popup {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    width: 90%;
+    max-width: 400px;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s ease;
+}
+
+.sync-popup.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.popup-card {
+    background: rgba(20, 20, 22, 0.95);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.popup-body {
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.popup-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-accept {
+    flex: 1;
+    background: var(--gold);
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.btn-reject {
+    flex: 1;
+    background: #222;
+    border: none;
+    color: #aaa;
+    padding: 10px;
+    border-radius: 10px;
+}
+</style>
+<script>
+    let pendingConn = null;
+
+// Show popup
+function showSyncPopup() {
+    document.getElementById("sync-popup").classList.add("show");
+}
+
+// Hide popup
+function hideSyncPopup() {
+    document.getElementById("sync-popup").classList.remove("show");
+}
+
+// Accept connection
+function acceptSync() {
+    if (pendingConn) {
+        conn = pendingConn;
+        setupConnectionListeners();
+        logSync("Sync Accepted. Establishing tunnel...", true);
+    }
+    hideSyncPopup();
+}
+
+// Reject connection
+function rejectSync() {
+    if (pendingConn) {
+        pendingConn.close();
+        logSync("Sync Request Rejected.");
+    }
+    hideSyncPopup();
+}
+</script>
     <script>
         let peer = null;
         let conn = null;
@@ -217,11 +334,13 @@
             });
 
             // Handle incoming connection
-            peer.on('connection', (incomingConn) => {
-                conn = incomingConn;
-                logSync("Incoming Sync Request Detected...");
-                setupConnectionListeners();
-            });
+            let pendingConn = null;
+
+peer.on('connection', (incomingConn) => {
+    pendingConn = incomingConn;
+    logSync("Incoming Sync Request Detected...");
+    showSyncPopup();
+});
 
             peer.on('error', (err) => {
                 logSync("Connection Failed: " + err.type);
@@ -299,4 +418,5 @@
     </script>
 </body>
 </html>
+
 
