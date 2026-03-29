@@ -171,20 +171,27 @@ let conn;
 peer = new Peer(null, {
     debug: 2,
     config: {
-        'iceServers': [
+        iceTransportPolicy: "all", // use "relay" if you want to force TURN
+        iceServers: [
+            // ✅ STUN (free, required)
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            // This TURN server is the "Tunnel" that forces the connection through
+
+            // ✅ TURN (YOU MUST REPLACE THESE WITH REAL VALUES)
             {
-                urls: 'turn:relay.metered.ca:443',
-                username: 'metered',
-                credential: 'password'
+                urls: [
+                    'turn:global.relay.metered.ca:80',
+                    'turn:global.relay.metered.ca:80?transport=tcp',
+                    'turn:global.relay.metered.ca:443',
+                    'turns:global.relay.metered.ca:443?transport=tcp'
+                ],
+                username: 'YOUR_REAL_USERNAME',
+                credential: 'YOUR_REAL_PASSWORD'
             }
         ],
-        'sdpSemantics': 'unified-plan'
+        sdpSemantics: 'unified-plan'
     }
 });
-
 
 
 
