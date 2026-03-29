@@ -276,16 +276,19 @@
 
     // Accept connection  
     function acceptSync() {  
-        if (pendingConn) {  
-            conn = pendingConn;
+    if (pendingConn) {  
+        conn = pendingConn;
 
-            // ✅ Send ACCEPT signal
-            conn.send({ type: "accept" });
+        // ✅ Send accept to other device
+        conn.send({ type: "accept" });
 
-            logSync("Sync Accepted. Establishing tunnel...", true);  
-        }  
-        hideSyncPopup();  
+        // ✅ ALSO enable THIS device immediately
+        logSync("P2P Tunnel Secure. Data Syncing Active.", true);  
+        document.getElementById('btn-to-chat').disabled = false;  
+        document.getElementById('btn-to-chat').innerText = "Access Chat Tunnel";  
     }  
+    hideSyncPopup();  
+}
 
     // Reject connection  
     function rejectSync() {  
