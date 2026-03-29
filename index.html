@@ -264,36 +264,34 @@
 <script>  
     let pendingConn = null;  
 
-    // Show popup  
     function showSyncPopup() {  
         document.getElementById("sync-popup").classList.add("show");  
     }  
 
-    // Hide popup  
     function hideSyncPopup() {  
         document.getElementById("sync-popup").classList.remove("show");  
     }  
 
-    // Accept connection  
     function acceptSync() {  
-    if (pendingConn) {  
-        conn = pendingConn;
+        if (pendingConn) {  
+            conn = pendingConn;
 
-        // ✅ Send accept to other device
-        conn.send({ type: "accept" });
+            // ✅ mark accepted locally
+            conn._isAccepted = true;
 
-        // ✅ ALSO enable THIS device immediately
-        logSync("P2P Tunnel Secure. Data Syncing Active.", true);  
-        document.getElementById('btn-to-chat').disabled = false;  
-        document.getElementById('btn-to-chat').innerText = "Access Chat Tunnel";  
-    }  
-    hideSyncPopup();  
-}
+            // ✅ notify other device
+            conn.send({ type: "accept" });
 
-    // Reject connection  
+            logSync("P2P Tunnel Secure. Data Syncing Active.", true);  
+            document.getElementById('btn-to-chat').disabled = false;  
+            document.getElementById('btn-to-chat').innerText = "Access Chat Tunnel";  
+        }  
+        hideSyncPopup();  
+    }
+
     function rejectSync() {  
         if (pendingConn) {  
-            pendingConn.send({ type: "reject" }); // notify sender
+            pendingConn.send({ type: "reject" });  
             pendingConn.close();  
             logSync("Sync Request Rejected.");  
         }  
@@ -305,7 +303,6 @@
     let peer = null;  
     let conn = null;  
 
-    // --- NAVIGATION LOGIC ---  
     function showScreen(screenId) {  
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));  
         const target = document.getElementById(screenId);  
@@ -322,7 +319,6 @@
         initPeer();  
     }  
 
-    // --- PEER LOGIC ---  
     function initPeer() {  
         if(peer) return;  
 
@@ -344,7 +340,6 @@
         peer.on('connection', (incomingConn) => {  
             pendingConn = incomingConn;
 
-            // ✅ Attach listeners immediately
             conn = incomingConn;
             setupConnectionListeners();
 
@@ -370,7 +365,8 @@
     function setupConnectionListeners() {  
         if (!conn) return;  
 
-        let isAccepted = false; // ✅ handshake state
+        // ✅ use shared state from connection
+        let isAccepted = conn._isAccepted || false;
 
         conn.on('open', () => {  
             logSync("Connection Established. Waiting for approval...");  
@@ -378,10 +374,10 @@
 
         conn.on('data', (data) => {  
 
-            // ✅ HANDLE HANDSHAKE
             if (typeof data === "object") {
 
                 if (data.type === "accept") {
+                    conn._isAccepted = true;
                     isAccepted = true;
 
                     logSync("P2P Tunnel Secure. Data Syncing Active.", true);  
@@ -397,8 +393,8 @@
                 }
             }
 
-            // ✅ Only allow chat AFTER accept
-            if (isAccepted) {
+            // ✅ allow messages only if accepted
+            if (conn._isAccepted) {
                 appendChatMessage("Peer", data, 'received');  
             }
         });  
@@ -410,12 +406,11 @@
         });  
     }  
 
-    // --- CHAT LOGIC ---  
     function handleSendMessage() {  
         const input = document.getElementById('chat-msg-input');  
         const msg = input.value.trim();  
           
-        if (msg && conn && conn.open) {  
+        if (msg && conn && conn.open && conn._isAccepted) {  
             conn.send(msg);  
             appendChatMessage("You", msg, 'sent');  
             input.value = "";  
@@ -439,7 +434,6 @@
         consoleBox.prepend(entry);  
     }  
 
-    // Handle Enter Key  
     document.getElementById('chat-msg-input').addEventListener('keypress', (e) => {  
         if (e.key === 'Enter') handleSendMessage();  
     });  
